@@ -203,7 +203,7 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
   <div id="tab-todo" class="tabview on">
     <div class="card">
       <div class="section-title">🌷 새 할일 심기</div>
-      <input type="text" id="todoText" placeholder="할 일을 적어주세요" onkeydown="if(event.key==='Enter')addTodo()">
+      <input type="text" id="todoText" placeholder="할 일을 적어주세요 (운동만 하실 땐 비워두셔도 돼요)" onkeydown="if(event.key==='Enter')addTodo()">
       <label class="toggle-ex" style="margin-top:8px">📅 날짜
         <input type="date" id="todoDate" style="flex:1;width:auto">
       </label>
@@ -440,9 +440,10 @@ function showTab(t){
 
 /* ═══ 할일 ═══ */
 function addTodo(){
-  const text=todoText.value.trim();
-  if(!text){alert('할일 내용을 적어주세요 🌱');return;}
+  let text=todoText.value.trim();
   const isEx=todoIsEx.checked;
+  if(isEx&&!text)text=exName.value.trim(); // 운동이면 운동명을 할일 내용으로 자동 사용
+  if(!text){alert(isEx?'운동명을 넣어주세요 (예: 달리기) 🏃':'할일 내용을 적어주세요 🌱');return;}
   const item={
     text, isExercise:isEx, done:false, date:(todoDate.value||vnDate()),
     createdAt:new Date().toISOString(), doneDate:null, doneAt:null
