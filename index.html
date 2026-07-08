@@ -160,7 +160,7 @@ button.mini{
 .toggle-ex{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:14px;color:var(--ink-soft)}
 .toggle-ex input{width:20px;height:20px;accent-color:var(--leaf)}
 #exFields{display:none;margin-top:8px}
-#exFields.on{display:flex;gap:8px}
+#exFields.on{display:block}
 details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-size:16px;padding:4px 0}
 </style>
 </head>
@@ -203,18 +203,25 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
   <div id="tab-todo" class="tabview on">
     <div class="card">
       <div class="section-title">🌷 새 할일 심기</div>
-      <input type="text" id="todoText" placeholder="오늘 할 일을 적어주세요" onkeydown="if(event.key==='Enter')addTodo()">
+      <input type="text" id="todoText" placeholder="할 일을 적어주세요" onkeydown="if(event.key==='Enter')addTodo()">
+      <label class="toggle-ex" style="margin-top:8px">📅 날짜
+        <input type="date" id="todoDate" style="flex:1;width:auto">
+      </label>
       <label class="toggle-ex">
         <input type="checkbox" id="todoIsEx" onchange="document.getElementById('exFields').classList.toggle('on',this.checked)">
         🏃 운동이에요 (차트에 기록됩니다)
       </label>
       <div id="exFields">
-        <input type="number" id="exAmount" placeholder="숫자" min="0" step="any" style="flex:1">
-        <select id="exUnit" style="flex:1">
-          <option value="회">회 (횟수)</option>
-          <option value="분">분 (시간)</option>
-          <option value="km">km (거리)</option>
-        </select>
+        <input type="text" id="exName" list="exNameList" placeholder="운동명 (예: 달리기, 걷기, 팔굽혀펴기)">
+        <datalist id="exNameList"></datalist>
+        <div class="row">
+          <input type="number" id="exAmount" placeholder="숫자" min="0" step="any">
+          <select id="exUnit">
+            <option value="회">회 (횟수)</option>
+            <option value="분">분 (시간)</option>
+            <option value="km">km (거리)</option>
+          </select>
+        </div>
       </div>
       <div class="row"><button class="btn" onclick="addTodo()">등록하기 🌱</button></div>
     </div>
@@ -271,6 +278,7 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
   <div id="tab-chart" class="tabview">
     <div class="card">
       <div class="section-title">🏃 운동 기록 차트</div>
+      <div class="cat-chips" id="exNameChips"></div>
       <div class="seg" id="segPeriod">
         <button data-p="day" class="on" onclick="setPeriod('day',this)">일간</button>
         <button data-p="week" onclick="setPeriod('week',this)">주간</button>
@@ -390,6 +398,7 @@ auth.onAuthStateChanged(u=>{
     loginView.style.display='none';
     appView.style.display='block';
     todayLabel.textContent='🇻🇳 '+vnNowStr();
+    todoDate.value=vnDate();
     listenData();
     if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
   }else{
@@ -435,16 +444,19 @@ function addTodo(){
   if(!text){alert('할일 내용을 적어주세요 🌱');return;}
   const isEx=todoIsEx.checked;
   const item={
-    text, isExercise:isEx, done:false, date:vnDate(),
+    text, isExercise:isEx, done:false, date:(todoDate.value||vnDate()),
     createdAt:new Date().toISOString(), doneDate:null, doneAt:null
   };
   if(isEx){
+    const name=exName.value.trim();
+    if(!name){alert('운동명을 넣어주세요 (예: 달리기) 🏃');return;}
     const amt=parseFloat(exAmount.value);
     if(!amt||amt<=0){alert('운동은 숫자(횟수/분/km)를 넣어주세요 🏃');return;}
-    item.exUnit=exUnit.value; item.exAmount=amt;
+    item.exName=name; item.exUnit=exUnit.value; item.exAmount=amt;
   }
   col('todos').add(item).then(()=>{
-    todoText.value=''; exAmount.value='';
+    todoText.value=''; exAmount.value=''; exName.value='';
+    todoDate.value=vnDate();
     todoIsEx.checked=false; document.getElementById('exFields').classList.remove('on');
   }).catch(e=>alert('저장 실패: '+e.message));
 }
@@ -453,12 +465,14 @@ function renderTodos(){
   const list=document.getElementById('todoList');
   const sorted=[...todos].sort((a,b)=>(a.done-b.done)||(a.date<b.date?-1:1)||(a.createdAt<b.createdAt?-1:1));
   if(!sorted.length){list.innerHTML='<div class="empty">오늘은 아직 할일이 없어요 🌼 위에서 심어보세요!</div>';return;}
+  updateExNameList();
   list.innerHTML=sorted.map(t=>{
     const late=!t.done&&t.date<today;
+    const future=!t.done&&t.date>today;
     return `<div class="todo-item ${t.done?'done':''}">
       <input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo('${t.id}',this.checked)">
       <div class="todo-main">
-        <div class="todo-text">${t.isExercise?'🏃 ':''}${esc(t.text)}${t.isExercise?` <span class="badge ex">${t.exAmount}${esc(t.exUnit)}</span>`:''}${late?` <span class="badge late">📅 ${t.date} 부터</span>`:''}</div>
+        <div class="todo-text">${t.isExercise?'🏃 ':''}${esc(t.text)}${t.isExercise?` <span class="badge ex">${esc(t.exName||'')} ${t.exAmount}${esc(t.exUnit)}</span>`:''}${late?` <span class="badge late">📅 ${t.date} 부터</span>`:''}${future?` <span class="badge late">📅 ${t.date} 예정</span>`:''}</div>
         <div class="todo-sub">${t.done?'✅ '+fmtTime(t.doneAt)+' 완료':''}</div>
       </div>
       ${!t.done?`<div class="todo-actions">
@@ -503,7 +517,7 @@ function searchDone(){
     el.innerHTML=arr.length?arr.slice(0,200).map(t=>`
       <div class="todo-item done">
         <div class="todo-main">
-          <div class="todo-text">${t.isExercise?'🏃 ':''}${esc(t.text)}${t.isExercise?` <span class="badge ex">${t.exAmount}${esc(t.exUnit)}</span>`:''}</div>
+          <div class="todo-text">${t.isExercise?'🏃 ':''}${esc(t.text)}${t.isExercise?` <span class="badge ex">${esc(t.exName||'')} ${t.exAmount}${esc(t.exUnit)}</span>`:''}</div>
           <div class="todo-sub">✅ ${fmtTime(t.doneAt)} 완료</div>
         </div>
       </div>`).join(''):'<div class="empty">검색 결과가 없어요 🍃</div>';
@@ -580,8 +594,44 @@ function renderMemos(){
 function delMemo(id){if(confirm('이 메모를 지울까요?'))col('memos').doc(id).delete();}
 
 /* ═══ 운동 차트 ═══ */
+let selectedExName='전체';
 function setPeriod(p,btn){chartPeriod=p;document.querySelectorAll('#segPeriod button').forEach(x=>x.classList.toggle('on',x===btn));renderChart();}
 function setUnit(u,btn){chartUnit=u;document.querySelectorAll('#segUnit button').forEach(x=>x.classList.toggle('on',x===btn));renderChart();}
+
+/* 운동명 자동완성 목록 (과거에 쓴 운동명 모으기) */
+function allExNames(){
+  const set=new Set();
+  exDone.forEach(t=>{if(t.exName)set.add(t.exName.trim());});
+  todos.forEach(t=>{if(t.isExercise&&t.exName)set.add(t.exName.trim());});
+  return [...set].sort();
+}
+function updateExNameList(){
+  const dl=document.getElementById('exNameList');
+  if(dl)dl.innerHTML=allExNames().map(n=>`<option value="${esc(n)}">`).join('');
+}
+/* 차트의 운동명 선택 버튼 */
+function renderExNameChips(){
+  const names=allExNames();
+  const box=document.getElementById('exNameChips');
+  if(selectedExName!=='전체'&&!names.includes(selectedExName))selectedExName='전체';
+  box.innerHTML=['전체',...names].map(n=>
+    `<button class="chip ${n===selectedExName?'on':''}" onclick="setExNameFilter('${esc(n).replace(/'/g,"\\'")}')">${n==='전체'?'🌈 전체':'🏃 '+esc(n)}</button>`
+  ).join('');
+}
+function setExNameFilter(name){
+  selectedExName=name;
+  if(name!=='전체'){
+    // 그 운동이 가장 많이 쓴 단위로 자동 전환 (예: 달리기→km)
+    const cnt={};
+    exDone.filter(t=>(t.exName||'').trim()===name).forEach(t=>{cnt[t.exUnit]=(cnt[t.exUnit]||0)+1;});
+    const best=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];
+    if(best){
+      chartUnit=best;
+      document.querySelectorAll('#segUnit button').forEach(x=>x.classList.toggle('on',x.dataset.u===best));
+    }
+  }
+  renderChart();
+}
 
 function weekKey(dateStr){ // 그 주 월요일 날짜
   const d=new Date(dateStr+'T00:00:00Z');
@@ -612,7 +662,10 @@ function buildBuckets(){
 }
 function renderChart(){
   const canvas=document.getElementById('exChart');
-  const rows=exDone.filter(t=>t.exUnit===chartUnit&&t.doneDate);
+  renderExNameChips();
+  updateExNameList();
+  const rows=exDone.filter(t=>t.exUnit===chartUnit&&t.doneDate
+    &&(selectedExName==='전체'||(t.exName||'').trim()===selectedExName));
   const {keys,labels,keyFn}=buildBuckets();
   const sums={};keys.forEach(k=>sums[k]=0);
   rows.forEach(t=>{const k=keyFn(t.doneDate);if(k in sums)sums[k]+=Number(t.exAmount)||0;});
@@ -638,7 +691,7 @@ function renderChart(){
   chartObj=new Chart(canvas,{
     type:'bar',
     data:{labels,datasets:[{
-      label:chartUnit==='회'?'횟수':chartUnit==='분'?'분':'km',
+      label:(selectedExName==='전체'?'전체 운동':selectedExName)+' ('+chartUnit+')',
       data,
       backgroundColor:'rgba(232,130,155,.55)',
       borderColor:'#E8829B',borderWidth:1.5,borderRadius:8,
