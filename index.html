@@ -56,7 +56,16 @@ h1,h2,h3,.jua{font-family:'Jua',sans-serif;font-weight:400}
 header.top{
   text-align:center;padding:18px 0 10px;
 }
-header.top h1{font-size:30px;color:var(--pink);letter-spacing:1px}
+header.top h1{font-size:30px;color:var(--pink);letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:8px}
+header.top h1 .gold{
+  background:linear-gradient(135deg,#FFE27A 0%,#F7C948 30%,#E0A417 55%,#B8860B 75%,#FFD86B 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 2px 6px rgba(184,134,11,.15);
+}
+header.top h1 .title-icon{
+  height:42px;width:42px;border-radius:12px;vertical-align:middle;
+  box-shadow:0 3px 8px rgba(232,130,155,.3);border:2px solid #FBD5DE;
+}
 header.top .date{color:var(--ink-soft);font-size:14px;margin-top:4px}
 
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
@@ -121,6 +130,7 @@ button.mini{
 .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:4px}
 .badge.ex{background:var(--leaf-soft);color:#4C7A4B}
 .badge.late{background:#FFF0E0;color:#B4690E}
+.badge.time{background:#E9F2FF;color:#3B6BB0}
 .todo-actions{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
 .section-title{font-size:18px;color:var(--pink);margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .empty{color:var(--ink-soft);text-align:center;padding:18px;font-size:14px}
@@ -147,6 +157,10 @@ button.mini{
   border-radius:14px;padding:10px;text-align:center}
 .stat .v{font-family:'Jua';font-size:20px;color:var(--pink)}
 .stat .l{font-size:11px;color:var(--ink-soft)}
+.stat .diff{font-family:'Jua';font-size:13px;margin-top:2px;min-height:16px}
+.diff.up{color:#2E9E4F}
+.diff.down{color:#D9534F}
+.diff.same{color:#B49CA6}
 
 /* ── 모달 ── */
 .modal-bg{position:fixed;inset:0;background:rgba(74,59,64,.45);z-index:100;display:none;
@@ -197,7 +211,7 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
 <div class="wrap">
   <button class="logout" onclick="doLogout()">로그아웃</button>
   <header class="top">
-    <h1>🌸 민성이의 하루 🌸</h1>
+    <h1>🐯 <span class="gold">민성이</span>의 <img src="icon-192.png" class="title-icon" alt="하루"> 🐯</h1>
     <div class="date" id="todayLabel"></div>
   </header>
 
@@ -214,6 +228,8 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
       <input type="text" id="todoText" placeholder="할 일을 적어주세요 (운동만 하실 땐 비워두셔도 돼요)" onkeydown="if(event.key==='Enter')addTodo()">
       <label class="toggle-ex" style="margin-top:8px">📅 날짜
         <input type="date" id="todoDate" style="flex:1;width:auto">
+        ⏰ 시간
+        <input type="time" id="todoTime" style="flex:1;width:auto">
       </label>
       <label class="toggle-ex">
         <input type="checkbox" id="todoIsEx" onchange="document.getElementById('exFields').classList.toggle('on',this.checked)">
@@ -298,9 +314,9 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
         <button data-u="km" onclick="setUnit('km',this)">거리(km)</button>
       </div>
       <div class="stats">
-        <div class="stat"><div class="v" id="stToday">0</div><div class="l">오늘</div></div>
-        <div class="stat"><div class="v" id="stWeek">0</div><div class="l">이번 주</div></div>
-        <div class="stat"><div class="v" id="stMonth">0</div><div class="l">이번 달</div></div>
+        <div class="stat"><div class="v" id="stToday">0</div><div class="l">오늘</div><div class="diff" id="dToday"></div></div>
+        <div class="stat"><div class="v" id="stWeek">0</div><div class="l">이번 주</div><div class="diff" id="dWeek"></div></div>
+        <div class="stat"><div class="v" id="stMonth">0</div><div class="l">이번 달</div><div class="diff" id="dMonth"></div></div>
       </div>
       <canvas id="exChart" height="240"></canvas>
       <div class="empty" id="chartEmpty" style="display:none">아직 완료한 운동이 없어요 🌱<br>할일에서 "운동"으로 등록하고 체크하면 여기에 쌓입니다!</div>
@@ -312,8 +328,8 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
 <!-- ── 저녁 8시 알람 모달 ── -->
 <div class="modal-bg" id="alarmModal">
   <div class="modal">
-    <h3>🔔 저녁 8시 알림이에요!</h3>
-    <p class="desc">아직 못 끝낸 할일이 있어요. 어떻게 할까요?</p>
+    <h3 id="alarmTitle">🔔 저녁 6시 알림이에요!</h3>
+    <p class="desc" id="alarmDesc">아직 못 끝낸 할일이 있어요. 어떻게 할까요?</p>
     <div id="alarmList"></div>
     <div class="row"><button class="btn ghost" onclick="closeAlarm()">나중에 정할게요</button></div>
   </div>
@@ -354,6 +370,9 @@ function vnDate(d){ // YYYY-MM-DD (베트남 기준)
 function vnHour(){
   return parseInt(new Intl.DateTimeFormat('en-GB',{timeZone:VN,hour:'2-digit',hour12:false}).format(new Date()),10);
 }
+function vnHHMM(){
+  return new Intl.DateTimeFormat('en-GB',{timeZone:VN,hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
+}
 function vnNowStr(){
   return new Intl.DateTimeFormat('ko-KR',{timeZone:VN,dateStyle:'full'}).format(new Date());
 }
@@ -365,6 +384,20 @@ function fmtTime(iso){
   return new Intl.DateTimeFormat('ko-KR',{timeZone:VN,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(iso));
 }
 function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+/* 운동명에 맞는 이모티콘 자동 선택 */
+const EX_EMOJI=[
+  [/달리|러닝|런닝|조깅|마라톤/,'🏃'],[/걷|산책|워킹/,'🚶'],[/자전거|사이클|바이크/,'🚴'],
+  [/수영/,'🏊'],[/스쿼트|런지|하체/,'🦵'],[/팔굽|푸시업|푸쉬업/,'💪'],
+  [/요가|스트레칭|필라테스/,'🧘'],[/등산|하이킹|트레킹/,'🥾'],[/골프/,'⛳'],
+  [/축구|풋살/,'⚽'],[/야구/,'⚾'],[/농구/,'🏀'],[/테니스/,'🎾'],[/배드민턴/,'🏸'],
+  [/탁구/,'🏓'],[/줄넘기|점프/,'🤸'],[/헬스|웨이트|근력|덤벨|바벨|턱걸이|철봉/,'🏋️'],
+  [/복싱|권투|킥복/,'🥊'],[/플랭크|코어|복근|윗몸/,'🔥'],[/계단/,'🪜'],[/춤|댄스/,'💃']
+];
+function exEmoji(name){
+  const n=(name||'').trim();
+  for(const [re,emo] of EX_EMOJI){if(re.test(n))return emo;}
+  return '💪';
+}
 
 /* ── 벚꽃잎 뿌리기 ── */
 (function(){
@@ -454,6 +487,7 @@ function addTodo(){
   if(!text){alert(isEx?'운동명을 넣어주세요 (예: 달리기) 🏃':'할일 내용을 적어주세요 🌱');return;}
   const item={
     text, isExercise:isEx, done:false, date:(todoDate.value||vnDate()),
+    time:(todoTime.value||null), timeNotified:false,
     createdAt:new Date().toISOString(), doneDate:null, doneAt:null
   };
   if(isEx){
@@ -465,14 +499,21 @@ function addTodo(){
   }
   col('todos').add(item).then(()=>{
     todoText.value=''; exAmount.value=''; exName.value='';
-    todoDate.value=vnDate();
+    todoDate.value=vnDate(); todoTime.value='';
     todoIsEx.checked=false; document.getElementById('exFields').classList.remove('on');
   }).catch(e=>alert('저장 실패: '+e.message));
 }
 function renderTodos(){
   const today=vnDate();
   const list=document.getElementById('todoList');
-  const sorted=[...todos].sort((a,b)=>(a.done-b.done)||(a.date<b.date?-1:1)||(a.createdAt<b.createdAt?-1:1));
+  const sorted=[...todos].sort((a,b)=>{
+    if(a.done!==b.done)return a.done-b.done;                 // 완료는 맨 아래
+    if(a.done)return (a.doneAt<b.doneAt?1:-1);               // 완료끼리는 최근 것 위
+    const at=!!a.time,bt=!!b.time;
+    if(at!==bt)return at?-1:1;                               // ⏰ 시간 있는 것 위쪽
+    if(at)return ((a.date+' '+a.time)<(b.date+' '+b.time)?-1:1); // 시간순
+    return a.text.localeCompare(b.text,'ko');                // 없으면 가나다순
+  });
   if(!sorted.length){list.innerHTML='<div class="empty">오늘은 아직 할일이 없어요 🌼 위에서 심어보세요!</div>';return;}
   updateExNameList();
   list.innerHTML=sorted.map(t=>{
@@ -481,7 +522,7 @@ function renderTodos(){
     return `<div class="todo-item ${t.done?'done':''}">
       <input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo('${t.id}',this.checked)">
       <div class="todo-main">
-        <div class="todo-text">${t.isExercise?'🏃 ':''}${esc(t.text)}${t.isExercise?` <span class="badge ex">${esc(t.exName||'')} ${t.exAmount}${esc(t.exUnit)}</span>`:''}${late?` <span class="badge late">📅 ${t.date} 부터</span>`:''}${future?` <span class="badge late">📅 ${t.date} 예정</span>`:''}</div>
+        <div class="todo-text">${t.isExercise?exEmoji(t.exName)+' ':''}${esc(t.text)}${t.time?` <span class="badge time">⏰ ${esc(t.time)}</span>`:''}${t.isExercise?` <span class="badge ex">${esc(t.exName||'')} ${t.exAmount}${esc(t.exUnit)}</span>`:''}${late?` <span class="badge late">📅 ${t.date} 부터</span>`:''}${future?` <span class="badge late">📅 ${t.date} 예정</span>`:''}</div>
         <div class="todo-sub">${t.done?'✅ '+fmtTime(t.doneAt)+' 완료':''}</div>
       </div>
       ${!t.done?`<div class="todo-actions">
@@ -526,7 +567,7 @@ function searchDone(){
     el.innerHTML=arr.length?arr.slice(0,200).map(t=>`
       <div class="todo-item done">
         <div class="todo-main">
-          <div class="todo-text">${t.isExercise?'🏃 ':''}${esc(t.text)}${t.isExercise?` <span class="badge ex">${esc(t.exName||'')} ${t.exAmount}${esc(t.exUnit)}</span>`:''}</div>
+          <div class="todo-text">${t.isExercise?exEmoji(t.exName)+' ':''}${esc(t.text)}${t.isExercise?` <span class="badge ex">${esc(t.exName||'')} ${t.exAmount}${esc(t.exUnit)}</span>`:''}</div>
           <div class="todo-sub">✅ ${fmtTime(t.doneAt)} 완료</div>
         </div>
       </div>`).join(''):'<div class="empty">검색 결과가 없어요 🍃</div>';
@@ -536,11 +577,13 @@ function searchDone(){
 /* ── 저녁 8시 알람 ── */
 function maybeAlarm(){
   const today=vnDate();
-  if(vnHour()<20)return;
+  if(vnHour()<18)return;
   if(localStorage.getItem('alarm-'+today))return;
   const open=todos.filter(t=>!t.done&&t.date<=today);
   if(!open.length)return;
   localStorage.setItem('alarm-'+today,'1');
+  alarmTitle.textContent='🔔 저녁 6시 알림이에요!';
+  alarmDesc.textContent='아직 못 끝낸 할일이 있어요. 어떻게 할까요?';
   showAlarm(open);
   if('Notification' in window && Notification.permission==='granted'){
     new Notification('🌸 민성이의 하루',{body:'아직 못 끝낸 할일이 '+open.length+'개 있어요!'});
@@ -549,7 +592,7 @@ function maybeAlarm(){
 function showAlarm(open){
   alarmList.innerHTML=open.map(t=>`
     <div class="todo-item">
-      <div class="todo-main"><div class="todo-text">${t.isExercise?'🏃 ':''}${esc(t.text)}</div></div>
+      <div class="todo-main"><div class="todo-text">${t.isExercise?exEmoji(t.exName)+' ':''}${esc(t.text)}${t.time?` <span class="badge time">⏰ ${esc(t.time)}</span>`:''}</div></div>
       <div class="todo-actions">
         <button class="mini cancel" onclick="cancelTodo('${t.id}');this.closest('.todo-item').remove()">취소 ❌</button>
         <button class="mini move" onclick="moveTodo('${t.id}');this.closest('.todo-item').remove()">내일로 ➡️</button>
@@ -558,7 +601,22 @@ function showAlarm(open){
   alarmModal.classList.add('on');
 }
 function closeAlarm(){alarmModal.classList.remove('on');}
-setInterval(()=>{if(UID)maybeAlarm();},60*1000);
+
+/* ⏰ 시간 지정 할일 알람 (앱이 열려 있을 때 정각에) */
+function checkTimeAlarms(){
+  const today=vnDate(), now=vnHHMM();
+  todos.filter(t=>!t.done&&t.time&&t.date===today&&t.time<=now&&!localStorage.getItem('ta-'+t.id))
+    .forEach(t=>{
+      localStorage.setItem('ta-'+t.id,'1');
+      alarmTitle.textContent='⏰ '+t.time+' 일정 시간이에요!';
+      alarmDesc.textContent='지금 할 시간입니다. 어떻게 할까요?';
+      showAlarm([t]);
+      if('Notification' in window && Notification.permission==='granted'){
+        new Notification('⏰ 민성이의 하루',{body:t.time+' - '+t.text});
+      }
+    });
+}
+setInterval(()=>{if(UID){checkTimeAlarms();maybeAlarm();}},30*1000);
 
 /* ═══ 메모 ═══ */
 function addMemo(){
@@ -669,6 +727,15 @@ function buildBuckets(){
   }
   return {keys,labels,keyFn:d=>d.slice(0,7)};
 }
+/* 지난 기간 대비 +초록 / -빨강 표시 */
+function setDiff(elId,cur,prev,label){
+  const el=document.getElementById(elId);
+  const d=Math.round((cur-prev)*100)/100;
+  if(prev===0&&cur===0){el.textContent='';el.className='diff';return;}
+  if(d>0){el.textContent='▲ +'+d+' ('+label+')';el.className='diff up';}
+  else if(d<0){el.textContent='▼ '+d+' ('+label+')';el.className='diff down';}
+  else{el.textContent='± 0 ('+label+')';el.className='diff same';}
+}
 function renderChart(){
   const canvas=document.getElementById('exChart');
   renderExNameChips();
@@ -680,18 +747,27 @@ function renderChart(){
   rows.forEach(t=>{const k=keyFn(t.doneDate);if(k in sums)sums[k]+=Number(t.exAmount)||0;});
   const data=keys.map(k=>Math.round(sums[k]*100)/100);
 
-  // 요약 (오늘/이번주/이번달)
+  // 요약 (오늘/이번주/이번달 + 어제/지난주/지난달 비교)
   const today=vnDate(),wk=weekKey(today),mo=today.slice(0,7);
-  let sT=0,sW=0,sM=0;
+  const yday=addDays(today,-1), lastWk=addDays(wk,-7);
+  const [yy,mm]=mo.split('-').map(Number);
+  const lastMo=(mm===1?(yy-1)+'-12':yy+'-'+String(mm-1).padStart(2,'0'));
+  let sT=0,sW=0,sM=0,pT=0,pW=0,pM=0;
   rows.forEach(t=>{
     const a=Number(t.exAmount)||0;
     if(t.doneDate===today)sT+=a;
     if(weekKey(t.doneDate)===wk)sW+=a;
     if(t.doneDate.slice(0,7)===mo)sM+=a;
+    if(t.doneDate===yday)pT+=a;                    // 어제
+    if(weekKey(t.doneDate)===lastWk)pW+=a;         // 지난주 전체
+    if(t.doneDate.slice(0,7)===lastMo)pM+=a;       // 지난달 전체
   });
   stToday.textContent=Math.round(sT*100)/100+chartUnit;
   stWeek.textContent=Math.round(sW*100)/100+chartUnit;
   stMonth.textContent=Math.round(sM*100)/100+chartUnit;
+  setDiff('dToday',sT,pT,'어제');
+  setDiff('dWeek',sW,pW,'지난주');
+  setDiff('dMonth',sM,pM,'지난달');
 
   chartEmpty.style.display=rows.length?'none':'block';
   canvas.style.display=rows.length?'block':'none';
