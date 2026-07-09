@@ -62,10 +62,7 @@ header.top h1 .gold{
   -webkit-background-clip:text;background-clip:text;color:transparent;
   text-shadow:0 2px 6px rgba(184,134,11,.15);
 }
-header.top h1 .haru{
-  background:linear-gradient(135deg,#FF8FAB 0%,#E8829B 45%,#9B72CF 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-}
+header.top h1 .haru-img{height:54px;width:auto;vertical-align:middle;filter:drop-shadow(0 2px 4px rgba(232,130,155,.3))}
 header.top .date{color:var(--ink-soft);font-size:14px;margin-top:4px}
 
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
@@ -211,7 +208,7 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
 <div class="wrap">
   <button class="logout" onclick="doLogout()">로그아웃</button>
   <header class="top">
-    <h1>🐯 <span class="gold">민성이</span>의 <span class="haru">하루</span> 🐯</h1>
+    <h1>🐯 <span class="gold">민성이</span>의 <img src="haru-text.png" class="haru-img" alt="하루"> 🐯</h1>
     <div class="date" id="todayLabel"></div>
   </header>
 
@@ -390,8 +387,8 @@ const EX_EMOJI=[
   [/수영/,'🏊'],[/스쿼트|런지|하체/,'🦵'],[/팔굽|푸시업|푸쉬업/,'💪'],
   [/요가|스트레칭|필라테스/,'🧘'],[/등산|하이킹|트레킹/,'🥾'],[/골프/,'⛳'],
   [/축구|풋살/,'⚽'],[/야구/,'⚾'],[/농구/,'🏀'],[/테니스/,'🎾'],[/배드민턴/,'🏸'],
-  [/탁구/,'🏓'],[/줄넘기|점프/,'🤸'],[/헬스|웨이트|근력|덤벨|바벨|턱걸이|철봉/,'🏋️'],
-  [/복싱|권투|킥복/,'🥊'],[/플랭크|코어|복근|윗몸/,'🔥'],[/계단/,'🪜'],[/춤|댄스/,'💃']
+  [/탁구/,'🏓'],[/줄넘기|점프/,'🤸'],[/헬스|웨이트|근력|덤벨|바벨|턱걸이|철봉|역기/,'🏋️'],
+  [/복싱|권투|킥복/,'🥊'],[/플랭크|코어|복근|윗몸|레그레이즈|레그 레이즈|크런치/,'🔥'],[/악력/,'✊'],[/완력/,'💪'],[/계단/,'🪜'],[/춤|댄스/,'💃']
 ];
 function exEmoji(name){
   const n=(name||'').trim();
