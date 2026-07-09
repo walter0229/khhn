@@ -1,9 +1,9 @@
-name: 🔔 저녁 8시 텔레그램 알림
+name: 🔔 하루 알림 (15분마다 확인)
 
 on:
   schedule:
-    # 매일 13:00 UTC = 베트남 시간 저녁 8시 (몇 분 지연될 수 있음)
-    - cron: '0 13 * * *'
+    # 15분마다 실행: 시간 지정 알람 확인 + 베트남 저녁 6시(11:00 UTC) 이후 미완료 요약 1회
+    - cron: '*/15 * * * *'
   workflow_dispatch: {}   # 수동 실행 버튼 (테스트용)
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
       - name: Node.js 설치
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: 알림 실행
         env:
