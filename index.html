@@ -62,9 +62,9 @@ header.top h1 .gold{
   -webkit-background-clip:text;background-clip:text;color:transparent;
   text-shadow:0 2px 6px rgba(184,134,11,.15);
 }
-header.top h1 .title-icon{
-  height:42px;width:42px;border-radius:12px;vertical-align:middle;
-  box-shadow:0 3px 8px rgba(232,130,155,.3);border:2px solid #FBD5DE;
+header.top h1 .haru{
+  background:linear-gradient(135deg,#FF8FAB 0%,#E8829B 45%,#9B72CF 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
 }
 header.top .date{color:var(--ink-soft);font-size:14px;margin-top:4px}
 
@@ -211,7 +211,7 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
 <div class="wrap">
   <button class="logout" onclick="doLogout()">로그아웃</button>
   <header class="top">
-    <h1>🐯 <span class="gold">민성이</span>의 <img src="icon-192.png" class="title-icon" alt="하루"> 🐯</h1>
+    <h1>🐯 <span class="gold">민성이</span>의 <span class="haru">하루</span> 🐯</h1>
     <div class="date" id="todayLabel"></div>
   </header>
 
@@ -506,13 +506,24 @@ function addTodo(){
 function renderTodos(){
   const today=vnDate();
   const list=document.getElementById('todoList');
+  function sortGroup(t){          // ①오늘(밀린 것 포함)+시간 ②오늘 시간없음 ③이후 할일 ④한 일
+    if(t.done)return 3;
+    if(t.date<=today)return t.time?0:1;
+    return 2;
+  }
   const sorted=[...todos].sort((a,b)=>{
-    if(a.done!==b.done)return a.done-b.done;                 // 완료는 맨 아래
-    if(a.done)return (a.doneAt<b.doneAt?1:-1);               // 완료끼리는 최근 것 위
-    const at=!!a.time,bt=!!b.time;
-    if(at!==bt)return at?-1:1;                               // ⏰ 시간 있는 것 위쪽
-    if(at)return ((a.date+' '+a.time)<(b.date+' '+b.time)?-1:1); // 시간순
-    return a.text.localeCompare(b.text,'ko');                // 없으면 가나다순
+    const ga=sortGroup(a),gb=sortGroup(b);
+    if(ga!==gb)return ga-gb;
+    if(ga===0)return ((a.date+' '+a.time)<(b.date+' '+b.time)?-1:1);   // ① 시간순
+    if(ga===1)return a.text.localeCompare(b.text,'ko');                 // ② 가나다순
+    if(ga===2){                                                         // ③ 날짜→시간→가나다
+      if(a.date!==b.date)return a.date<b.date?-1:1;
+      const at=!!a.time,bt=!!b.time;
+      if(at!==bt)return at?-1:1;
+      if(at&&a.time!==b.time)return a.time<b.time?-1:1;
+      return a.text.localeCompare(b.text,'ko');
+    }
+    return (a.doneAt<b.doneAt?1:-1);                                    // ④ 최근 완료 위
   });
   if(!sorted.length){list.innerHTML='<div class="empty">오늘은 아직 할일이 없어요 🌼 위에서 심어보세요!</div>';return;}
   updateExNameList();
@@ -682,7 +693,7 @@ function renderExNameChips(){
   const box=document.getElementById('exNameChips');
   if(selectedExName!=='전체'&&!names.includes(selectedExName))selectedExName='전체';
   box.innerHTML=['전체',...names].map(n=>
-    `<button class="chip ${n===selectedExName?'on':''}" onclick="setExNameFilter('${esc(n).replace(/'/g,"\\'")}')">${n==='전체'?'🌈 전체':'🏃 '+esc(n)}</button>`
+    `<button class="chip ${n===selectedExName?'on':''}" onclick="setExNameFilter('${esc(n).replace(/'/g,"\\'")}')">${n==='전체'?'🌈 전체':exEmoji(n)+' '+esc(n)}</button>`
   ).join('');
 }
 function setExNameFilter(name){
