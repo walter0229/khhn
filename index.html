@@ -550,8 +550,10 @@ function cancelTodo(id){
   if(confirm('이 할일을 취소(삭제)할까요?'))col('todos').doc(id).delete();
 }
 function moveTodo(id){
-  col('todos').doc(id).update({date:addDays(vnDate(),1)});
-  toastMsg('내일로 옮겼어요 ➡️🌷');
+  // 내일로 옮기면 "알람 보냈음" 도장을 지워서 새 날짜에 다시 알람이 오게 함
+  col('todos').doc(id).update({date:addDays(vnDate(),1),timeNotified:false});
+  localStorage.removeItem('ta-'+id);
+  toastMsg('내일로 옮겼어요 ➡️🌷 (알람도 다시 울려요)');
 }
 function toastMsg(m){ /* 간단 토스트 */
   const t=document.createElement('div');
