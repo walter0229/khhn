@@ -111,6 +111,7 @@ button.mini{
 }
 .mini.cancel{background:#FBE9E7;color:var(--danger)}
 .mini.move{background:var(--leaf-soft);color:#4C7A4B}
+.mini.done{background:#DFF5DC;color:#2E7D32;font-weight:bold}
 
 /* ── 할일 목록 ── */
 .todo-item{
@@ -546,6 +547,10 @@ function toggleTodo(id,checked){
     :{done:false,doneAt:null,doneDate:null};
   col('todos').doc(id).update(upd);
 }
+function completeTodo(id){
+  toggleTodo(id,true);
+  toastMsg('완료했어요 ✅🌸');
+}
 function cancelTodo(id){
   if(confirm('이 할일을 취소(삭제)할까요?'))col('todos').doc(id).delete();
 }
@@ -604,8 +609,9 @@ function showAlarm(open){
     <div class="todo-item">
       <div class="todo-main"><div class="todo-text">${t.isExercise?exEmoji(t.exName)+' ':''}${esc(t.text)}${t.time?` <span class="badge time">⏰ ${esc(t.time)}</span>`:''}</div></div>
       <div class="todo-actions">
-        <button class="mini cancel" onclick="cancelTodo('${t.id}');this.closest('.todo-item').remove()">취소 ❌</button>
+        <button class="mini done" onclick="completeTodo('${t.id}');this.closest('.todo-item').remove()">완료 ✅</button>
         <button class="mini move" onclick="moveTodo('${t.id}');this.closest('.todo-item').remove()">내일로 ➡️</button>
+        <button class="mini cancel" onclick="cancelTodo('${t.id}');this.closest('.todo-item').remove()">취소 ❌</button>
       </div>
     </div>`).join('');
   alarmModal.classList.add('on');
