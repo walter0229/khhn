@@ -843,22 +843,27 @@ function daysInMonth(dateStr){
 }
 function dowOf(dateStr){return new Date(dateStr+'T00:00:00Z').getUTCDay();}
 /* 오늘 해당하는 루틴을 오늘의 할일로 자동 등록 */
+let routineGenLock=new Set(); // 같은 세션에서 중복 시도 자체를 막는 메모리 잠금
 function generateRoutineTodos(){
   const today=vnDate(), dow=dowOf(today);
   const dayNum=parseInt(today.slice(8),10), dim=daysInMonth(today);
   routines.forEach(r=>{
-    if(r.lastGenDate===today)return; // 오늘 이미 처리함 (기기 간 중복 방지)
+    const lockKey=r.id+'_'+today;
+    if(routineGenLock.has(lockKey))return;      // 이번 세션에서 이미 시도함 → 재시도 차단
     let due=false;
     if(r.freq==='weekly')due=(r.weekdays||[]).includes(dow);
     else{const target=Math.min(r.monthDay||1,dim);due=(dayNum===target);}
-    const exists=[...todos,...routineTodos].some(t=>t.routineId===r.id&&t.date===today);
-    if(due&&!exists){
+    if(!due)return;
+    routineGenLock.add(lockKey);                // 잠금 (동기적으로 즉시 처리되어 재진입 차단)
+    // 🔑 루틴ID+날짜를 "고유 문서 번호"로 사용 → 몇 번을 시도해도 같은 문서 하나만 존재(중복 원천 차단)
+    const docId=r.id+'_'+today;
+    col('todos').doc(docId).get().then(snap=>{
+      if(snap.exists)return; // 이미 만들어져 있음(체크했을 수도 있으니 절대 덮어쓰지 않음)
       const item={text:r.name,isExercise:!!r.isExercise,done:false,date:today,time:null,timeNotified:false,
         isRoutine:true,routineId:r.id,createdAt:new Date().toISOString(),doneDate:null,doneAt:null};
       if(r.isExercise){item.exName=r.exName;item.exUnit=r.exUnit;item.exAmount=r.exAmount;}
-      col('todos').add(item);
-    }
-    col('routines').doc(r.id).update({lastGenDate:today});
+      col('todos').doc(docId).set(item);
+    });
   });
 }
 /* ═══ 루틴차트 (달성 달력) ═══ */
