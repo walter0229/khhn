@@ -129,6 +129,7 @@ button.mini{
 .badge.ex{background:var(--leaf-soft);color:#4C7A4B}
 .badge.late{background:#FFF0E0;color:#B4690E}
 .badge.time{background:#E9F2FF;color:#3B6BB0}
+.badge.routine{background:#F3E8FF;color:#7C4DBC}
 .todo-actions{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
 .section-title{font-size:18px;color:var(--pink);margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .empty{color:var(--ink-soft);text-align:center;padding:18px;font-size:14px}
@@ -181,6 +182,16 @@ button.mini{
 .toggle-ex input{width:20px;height:20px;accent-color:var(--leaf)}
 #exFields{display:none;margin-top:8px}
 #exFields.on{display:block}
+.rt-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.rt-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.rt-head{font-size:12px;color:var(--ink-soft);font-family:'Jua';padding:4px 0}
+.rt-cell{background:#FFFDFE;border:1px solid var(--line);border-radius:10px;min-height:46px;padding:3px 0}
+.rt-cell.blank{background:none;border:none}
+.rt-cell .d{font-size:11px;color:var(--ink-soft)}
+.rt-cell .m{font-size:17px;line-height:1.3}
+.rt-cell.today{border-color:var(--pink);background:#FFF3F6}
+.rt-total{text-align:center;font-family:'Jua';font-size:17px;color:var(--pink);margin-top:12px;
+  background:linear-gradient(135deg,#FFF0F4,#FFFDFE);border:1px solid var(--line);border-radius:14px;padding:10px}
 details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-size:16px;padding:4px 0}
 </style>
 </head>
@@ -215,8 +226,9 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
 
   <nav class="tabs">
     <button id="tabBtn-todo" class="on" onclick="showTab('todo')"><span class="ico">✅</span>할일</button>
+    <button id="tabBtn-routine" onclick="showTab('routine')"><span class="ico">🔁</span>루틴</button>
     <button id="tabBtn-memo" onclick="showTab('memo')"><span class="ico">📝</span>메모장</button>
-    <button id="tabBtn-chart" onclick="showTab('chart')"><span class="ico">📊</span>운동차트</button>
+    <button id="tabBtn-chart" onclick="showTab('chart')"><span class="ico">📊</span>차트</button>
   </nav>
 
   <!-- ═══ 탭1: 할일 ═══ -->
@@ -268,6 +280,48 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
     </div>
   </div>
 
+
+  <!-- ═══ 탭: 루틴 ═══ -->
+  <div id="tab-routine" class="tabview">
+    <div class="card">
+      <div class="section-title">🔁 새 루틴 만들기</div>
+      <input type="text" id="rName" placeholder="루틴 이름 (예: 공과금 납부, 달리기)">
+      <label class="toggle-ex">
+        <input type="checkbox" id="rIsEx" onchange="document.getElementById('rExFields').classList.toggle('on',this.checked)">
+        🏃 운동이에요 (완료하면 운동차트에도 기록)
+      </label>
+      <div id="rExFields">
+        <input type="text" id="rExName" list="exNameList" placeholder="운동명 (예: 달리기)">
+        <div class="row">
+          <input type="number" id="rExAmount" placeholder="숫자" min="0" step="any">
+          <select id="rExUnit">
+            <option value="회">회 (횟수)</option>
+            <option value="분">분 (시간)</option>
+            <option value="km">km (거리)</option>
+          </select>
+        </div>
+      </div>
+      <div class="seg" id="rFreqSeg" style="margin-top:10px">
+        <button data-f="weekly" class="on" onclick="setRFreq('weekly',this)">📅 매주 (요일)</button>
+        <button data-f="monthly" onclick="setRFreq('monthly',this)">🗓️ 매월 (날짜)</button>
+      </div>
+      <div id="rWeekly" class="cat-chips" style="justify-content:center"></div>
+      <div id="rMonthly" style="display:none;text-align:center;padding:6px 0">
+        매월 <select id="rMonthDay" style="width:90px;display:inline-block"></select> 일
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:4px">💡 29~31일 설정 시, 짧은 달엔 그 달 마지막 날에 나옵니다</div>
+      </div>
+      <div class="row"><button class="btn" onclick="addRoutine()">루틴 등록 🔁</button></div>
+    </div>
+    <div class="card">
+      <div class="section-title">🗂️ 내 루틴</div>
+      <div id="routineList"><div class="empty">아직 루틴이 없어요 🌱</div></div>
+    </div>
+    <div class="card" style="font-size:13px;color:var(--ink-soft)">
+      💡 루틴은 해당 날짜가 되면 <b>오늘의 할일</b>에 🔁 표시로 자동 등록됩니다.<br>
+      루틴은 <b>내일로 넘길 수 없고</b>, 당일 체크하지 않으면 "못함"으로 기록되어 루틴차트 달성율에 반영됩니다.
+    </div>
+  </div>
+
   <!-- ═══ 탭2: 메모장 ═══ -->
   <div id="tab-memo" class="tabview">
     <div class="card">
@@ -299,6 +353,11 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
   <!-- ═══ 탭3: 운동차트 ═══ -->
   <div id="tab-chart" class="tabview">
     <div class="card">
+      <div class="seg" id="chartModeSeg">
+        <button data-m="ex" class="on" onclick="setChartMode('ex',this)">🏃 운동차트</button>
+        <button data-m="routine" onclick="setChartMode('routine',this)">🔁 루틴차트</button>
+      </div>
+      <div id="exChartView">
       <div class="section-title">🏃 운동 기록 차트</div>
       <div class="cat-chips" id="exNameChips"></div>
       <div class="seg" id="segPeriod">
@@ -318,6 +377,21 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
       </div>
       <canvas id="exChart" height="240"></canvas>
       <div class="empty" id="chartEmpty" style="display:none">아직 완료한 운동이 없어요 🌱<br>할일에서 "운동"으로 등록하고 체크하면 여기에 쌓입니다!</div>
+      </div>
+
+      <div id="routineChartView" style="display:none">
+        <div class="section-title">🔁 루틴 달성 달력</div>
+        <div class="rt-nav">
+          <button class="mini move" onclick="rtNav(-1)">◀ 이전달</button>
+          <span class="jua" id="rtMonthLabel" style="font-size:18px;color:var(--pink)"></span>
+          <button class="mini move" onclick="rtNav(1)">다음달 ▶</button>
+        </div>
+        <div class="rt-grid" id="rtGrid"></div>
+        <div class="rt-total" id="rtTotal"></div>
+        <div style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:6px">
+          🌟 100% 달성 · 🟢 80% 이상 · ❌ 80% 미만
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -358,7 +432,9 @@ let memos = [];
 let exDone = [];  // 완료된 운동 (차트용)
 let chartPeriod = 'day', chartUnit = '회', chartObj = null;
 let memoCatFilter = '전체';
-let unsubTodos = null, unsubMemos = null, unsubEx = null;
+let unsubTodos = null, unsubMemos = null, unsubEx = null, unsubRoutines = null, unsubRT = null;
+let routines = [], routineTodos = [];
+let chartMode = 'ex', rFreq = 'weekly', rtMonth = null;
 
 /* ── 베트남 시간 도우미 ── */
 const VN = 'Asia/Ho_Chi_Minh';
@@ -444,7 +520,7 @@ auth.onAuthStateChanged(u=>{
     UID=null;
     loginView.style.display='block';
     appView.style.display='none';
-    if(unsubTodos)unsubTodos(); if(unsubMemos)unsubMemos(); if(unsubEx)unsubEx();
+    if(unsubTodos)unsubTodos(); if(unsubMemos)unsubMemos(); if(unsubEx)unsubEx(); if(unsubRoutines)unsubRoutines(); if(unsubRT)unsubRT();
   }
 });
 
@@ -466,15 +542,19 @@ function listenData(){
     .onSnapshot(s=>{memos=s.docs.map(d=>({id:d.id,...d.data()}));renderMemos();});
   unsubEx = col('todos').where('done','==',true).where('isExercise','==',true)
     .onSnapshot(s=>{exDone=s.docs.map(d=>({id:d.id,...d.data()}));renderChart();});
+  unsubRoutines = col('routines').orderBy('createdAt','desc')
+    .onSnapshot(s=>{routines=s.docs.map(d=>({id:d.id,...d.data()}));renderRoutines();generateRoutineTodos();});
+  unsubRT = col('todos').where('isRoutine','==',true)
+    .onSnapshot(s=>{routineTodos=s.docs.map(d=>({id:d.id,...d.data()}));if(chartMode==='routine')renderRoutineChart();});
 }
 
 /* ── 탭 ── */
 function showTab(t){
-  ['todo','memo','chart'].forEach(x=>{
+  ['todo','routine','memo','chart'].forEach(x=>{
     document.getElementById('tab-'+x).classList.toggle('on',x===t);
     document.getElementById('tabBtn-'+x).classList.toggle('on',x===t);
   });
-  if(t==='chart')renderChart();
+  if(t==='chart'){if(chartMode==='routine')renderRoutineChart();else renderChart();}
 }
 
 /* ═══ 할일 ═══ */
@@ -509,7 +589,8 @@ function renderTodos(){
     if(t.date<=today)return t.time?0:1;
     return 2;
   }
-  const sorted=[...todos].sort((a,b)=>{
+  const visible=todos.filter(t=>!(t.isRoutine&&!t.done&&t.date!==today)); // 지난/미래 루틴은 표시 안 함
+  const sorted=[...visible].sort((a,b)=>{
     const ga=sortGroup(a),gb=sortGroup(b);
     if(ga!==gb)return ga-gb;
     if(ga===0)return ((a.date+' '+a.time)<(b.date+' '+b.time)?-1:1);   // ① 시간순
@@ -530,12 +611,12 @@ function renderTodos(){
     return `<div class="todo-item ${t.done?'done':''}">
       <input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo('${t.id}',this.checked)">
       <div class="todo-main">
-        <div class="todo-text">${t.isExercise?exEmoji(t.exName)+' ':''}${esc(t.text)}${t.time?` <span class="badge time">⏰ ${esc(t.time)}</span>`:''}${t.isExercise?` <span class="badge ex">${esc(t.exName||'')} ${t.exAmount}${esc(t.exUnit)}</span>`:''}${late?` <span class="badge late">📅 ${t.date} 부터</span>`:''}${future?` <span class="badge time">📅 ${t.date}${t.time?' '+esc(t.time):''}</span>`:''}</div>
+        <div class="todo-text">${t.isExercise?exEmoji(t.exName)+' ':''}${esc(t.text)}${t.isRoutine?' <span class="badge routine">🔁</span>':''}${t.time?` <span class="badge time">⏰ ${esc(t.time)}</span>`:''}${t.isExercise?` <span class="badge ex">${esc(t.exName||'')} ${t.exAmount}${esc(t.exUnit)}</span>`:''}${late?` <span class="badge late">📅 ${t.date} 부터</span>`:''}${future?` <span class="badge time">📅 ${t.date}${t.time?' '+esc(t.time):''}</span>`:''}</div>
         <div class="todo-sub">${t.done?'✅ '+fmtTime(t.doneAt)+' 완료':''}</div>
       </div>
       ${!t.done?`<div class="todo-actions">
         <button class="mini cancel" onclick="cancelTodo('${t.id}')">취소 ❌</button>
-        <button class="mini move" onclick="moveTodo('${t.id}')">내일로 ➡️</button>
+        ${!t.isRoutine?`<button class="mini move" onclick="moveTodo('${t.id}')">내일로 ➡️</button>`:''}
       </div>`:''}
     </div>`;
   }
@@ -603,7 +684,7 @@ function maybeAlarm(){
   const today=vnDate();
   if(vnHour()<18)return;
   if(localStorage.getItem('alarm-'+today))return;
-  const open=todos.filter(t=>!t.done&&t.date<=today);
+  const open=todos.filter(t=>!t.done&&(t.isRoutine?t.date===today:t.date<=today));
   if(!open.length)return;
   localStorage.setItem('alarm-'+today,'1');
   alarmTitle.textContent='🔔 저녁 6시 알림이에요!';
@@ -619,7 +700,7 @@ function showAlarm(open){
       <div class="todo-main"><div class="todo-text">${t.isExercise?exEmoji(t.exName)+' ':''}${esc(t.text)}${t.time?` <span class="badge time">⏰ ${esc(t.time)}</span>`:''}</div></div>
       <div class="todo-actions">
         <button class="mini done" onclick="completeTodo('${t.id}');this.closest('.todo-item').remove()">완료 ✅</button>
-        <button class="mini move" onclick="moveTodo('${t.id}');this.closest('.todo-item').remove()">내일로 ➡️</button>
+        ${!t.isRoutine?`<button class="mini move" onclick="moveTodo('${t.id}');this.closest('.todo-item').remove()">내일로 ➡️</button>`:''}
         <button class="mini cancel" onclick="cancelTodo('${t.id}');this.closest('.todo-item').remove()">취소 ❌</button>
       </div>
     </div>`).join('');
@@ -641,7 +722,7 @@ function checkTimeAlarms(){
       }
     });
 }
-setInterval(()=>{if(UID){checkTimeAlarms();maybeAlarm();}},30*1000);
+setInterval(()=>{if(UID){checkTimeAlarms();maybeAlarm();generateRoutineTodos();}},30*1000);
 
 /* ═══ 메모 ═══ */
 function addMemo(){
@@ -684,6 +765,149 @@ function renderMemos(){
     </div>`).join(''):'<div class="empty">메모가 없어요 🍃</div>';
 }
 function delMemo(id){if(confirm('이 메모를 지울까요?'))col('memos').doc(id).delete();}
+
+
+/* ═══ 루틴 ═══ */
+const DOW_NAMES=['일','월','화','수','목','금','토'];
+const DOW_ORDER=[1,2,3,4,5,6,0]; // 표시 순서: 월~일
+let rWeekdaySel=new Set();
+(function(){
+  // 요일 선택 버튼
+  rWeekly.innerHTML=DOW_ORDER.map(d=>`<button class="chip" data-d="${d}" onclick="toggleRDow(${d},this)">${DOW_NAMES[d]}</button>`).join('');
+  // 매월 날짜 선택
+  rMonthDay.innerHTML=Array.from({length:31},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+})();
+function toggleRDow(d,btn){
+  if(rWeekdaySel.has(d)){rWeekdaySel.delete(d);btn.classList.remove('on');}
+  else{rWeekdaySel.add(d);btn.classList.add('on');}
+}
+function setRFreq(f,btn){
+  rFreq=f;
+  document.querySelectorAll('#rFreqSeg button').forEach(x=>x.classList.toggle('on',x===btn));
+  rWeekly.style.display=(f==='weekly')?'flex':'none';
+  rMonthly.style.display=(f==='monthly')?'block':'none';
+}
+function addRoutine(){
+  const name=rName.value.trim();
+  if(!name){alert('루틴 이름을 적어주세요 🔁');return;}
+  const item={name,freq:rFreq,isExercise:rIsEx.checked,createdAt:new Date().toISOString(),lastGenDate:null};
+  if(rFreq==='weekly'){
+    if(!rWeekdaySel.size){alert('요일을 하나 이상 선택해주세요 📅');return;}
+    item.weekdays=[...rWeekdaySel];
+  }else{
+    item.monthDay=parseInt(rMonthDay.value,10);
+  }
+  if(item.isExercise){
+    const en=rExName.value.trim(), amt=parseFloat(rExAmount.value);
+    if(!en){alert('운동명을 넣어주세요 🏃');return;}
+    if(!amt||amt<=0){alert('운동 숫자를 넣어주세요 🏃');return;}
+    item.exName=en; item.exUnit=rExUnit.value; item.exAmount=amt;
+  }
+  col('routines').add(item).then(()=>{
+    rName.value='';rExName.value='';rExAmount.value='';
+    rIsEx.checked=false;document.getElementById('rExFields').classList.remove('on');
+    rWeekdaySel.clear();
+    document.querySelectorAll('#rWeekly .chip').forEach(x=>x.classList.remove('on'));
+    toastMsg('루틴 등록 완료 🔁🌸');
+  }).catch(e=>alert('저장 실패: '+e.message));
+}
+function routineDesc(r){
+  if(r.freq==='weekly'){
+    const days=DOW_ORDER.filter(d=>(r.weekdays||[]).includes(d)).map(d=>DOW_NAMES[d]).join('·');
+    return '매주 '+days;
+  }
+  return '매월 '+r.monthDay+'일';
+}
+function renderRoutines(){
+  const el=document.getElementById('routineList');
+  if(!routines.length){el.innerHTML='<div class="empty">아직 루틴이 없어요 🌱</div>';return;}
+  el.innerHTML=routines.map(r=>`
+    <div class="todo-item">
+      <div class="todo-main">
+        <div class="todo-text">${r.isExercise?exEmoji(r.exName)+' ':'📌 '}${esc(r.name)}
+          ${r.isExercise?` <span class="badge ex">${esc(r.exName||'')} ${r.exAmount}${esc(r.exUnit)}</span>`:''}
+          <span class="badge routine">🔁 ${routineDesc(r)}</span>
+        </div>
+      </div>
+      <div class="todo-actions">
+        <button class="mini cancel" onclick="delRoutine('${r.id}')">삭제 ❌</button>
+      </div>
+    </div>`).join('');
+}
+function delRoutine(id){
+  if(confirm('이 루틴을 삭제할까요? (지난 달성 기록은 남습니다)'))col('routines').doc(id).delete();
+}
+function daysInMonth(dateStr){
+  const y=parseInt(dateStr.slice(0,4),10), m=parseInt(dateStr.slice(5,7),10);
+  return new Date(Date.UTC(y,m,0)).getUTCDate();
+}
+function dowOf(dateStr){return new Date(dateStr+'T00:00:00Z').getUTCDay();}
+/* 오늘 해당하는 루틴을 오늘의 할일로 자동 등록 */
+function generateRoutineTodos(){
+  const today=vnDate(), dow=dowOf(today);
+  const dayNum=parseInt(today.slice(8),10), dim=daysInMonth(today);
+  routines.forEach(r=>{
+    if(r.lastGenDate===today)return; // 오늘 이미 처리함 (기기 간 중복 방지)
+    let due=false;
+    if(r.freq==='weekly')due=(r.weekdays||[]).includes(dow);
+    else{const target=Math.min(r.monthDay||1,dim);due=(dayNum===target);}
+    const exists=[...todos,...routineTodos].some(t=>t.routineId===r.id&&t.date===today);
+    if(due&&!exists){
+      const item={text:r.name,isExercise:!!r.isExercise,done:false,date:today,time:null,timeNotified:false,
+        isRoutine:true,routineId:r.id,createdAt:new Date().toISOString(),doneDate:null,doneAt:null};
+      if(r.isExercise){item.exName=r.exName;item.exUnit=r.exUnit;item.exAmount=r.exAmount;}
+      col('todos').add(item);
+    }
+    col('routines').doc(r.id).update({lastGenDate:today});
+  });
+}
+/* ═══ 루틴차트 (달성 달력) ═══ */
+function setChartMode(m,btn){
+  chartMode=m;
+  document.querySelectorAll('#chartModeSeg button').forEach(x=>x.classList.toggle('on',x===btn));
+  exChartView.style.display=(m==='ex')?'block':'none';
+  routineChartView.style.display=(m==='routine')?'block':'none';
+  if(m==='routine')renderRoutineChart();else renderChart();
+}
+function rtNav(d){
+  const [y,m]=(rtMonth||vnDate().slice(0,7)).split('-').map(Number);
+  const nm=m+d, ny=y+Math.floor((nm-1)/12), mo=((nm-1)%12+12)%12+1;
+  rtMonth=ny+'-'+String(mo).padStart(2,'0');
+  renderRoutineChart();
+}
+function renderRoutineChart(){
+  const today=vnDate();
+  if(!rtMonth)rtMonth=today.slice(0,7);
+  rtMonthLabel.textContent=rtMonth.replace('-','년 ')+'월';
+  // 날짜별 집계
+  const byDate={};
+  routineTodos.forEach(t=>{
+    if(!t.date||t.date.slice(0,7)!==rtMonth)return;
+    if(!byDate[t.date])byDate[t.date]={done:0,total:0};
+    byDate[t.date].total++;
+    if(t.done)byDate[t.date].done++;
+  });
+  const dim=daysInMonth(rtMonth+'-01');
+  const firstDow=dowOf(rtMonth+'-01');
+  let cells=DOW_NAMES.map(n=>`<div class="rt-head">${n}</div>`).join('');
+  for(let i=0;i<firstDow;i++)cells+='<div class="rt-cell blank"></div>';
+  let sumDone=0,sumTotal=0;
+  for(let d=1;d<=dim;d++){
+    const ds=rtMonth+'-'+String(d).padStart(2,'0');
+    const rec=byDate[ds];
+    let mark='';
+    if(rec&&ds<=today){
+      const rate=rec.done/rec.total;
+      mark=(rate>=1)?'🌟':(rate>=0.8)?'🟢':'❌';
+      sumDone+=rec.done;sumTotal+=rec.total;
+    }
+    cells+=`<div class="rt-cell ${ds===today?'today':''}"><div class="d">${d}</div><div class="m">${mark}</div></div>`;
+  }
+  rtGrid.innerHTML=cells;
+  rtTotal.innerHTML=sumTotal
+    ?`이번달 평균 달성율: <b>${Math.round(sumDone/sumTotal*100)}%</b> (${sumDone}/${sumTotal})`
+    :'이번달 루틴 기록이 아직 없어요 🌱';
+}
 
 /* ═══ 운동 차트 ═══ */
 let selectedExName='전체';
