@@ -73,6 +73,7 @@ async function main() {
       time: f.time?.stringValue || null,
       timeNotified: f.timeNotified?.booleanValue || false,
       isEx: f.isExercise?.booleanValue || false,
+      isRoutine: f.isRoutine?.booleanValue || false,
     };
   });
 
@@ -95,7 +96,7 @@ async function main() {
     if (metaRes.ok) { const m = await metaRes.json(); last = m.fields?.lastSummaryDate?.stringValue || null; }
     if (last === today) { console.log('🔕 오늘 저녁 요약은 이미 보냈음'); }
     else {
-      const open = all.filter((t) => t.date && t.date <= today);
+      const open = all.filter((t) => t.date && (t.isRoutine ? t.date === today : t.date <= today));
       console.log(`📋 오늘(${today}) 기준 미완료 할일: ${open.length}개`);
       if (open.length) {
         const lines = open.map((t, i) => `${i + 1}. ${t.isEx ? '🏃 ' : ''}${t.text}${t.time ? ' (⏰' + t.time + ')' : ''}`).join('\n');
