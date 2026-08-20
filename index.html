@@ -229,6 +229,7 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
     <button id="tabBtn-routine" onclick="showTab('routine')"><span class="ico">🔁</span>루틴</button>
     <button id="tabBtn-memo" onclick="showTab('memo')"><span class="ico">📝</span>메모장</button>
     <button id="tabBtn-chart" onclick="showTab('chart')"><span class="ico">📊</span>차트</button>
+    <button id="tabBtn-memory" onclick="showTab('memory')"><span class="ico">📔</span>기억</button>
   </nav>
 
   <!-- ═══ 탭1: 할일 ═══ -->
@@ -394,6 +395,32 @@ details.search summary{font-family:'Jua';color:var(--pink);cursor:pointer;font-s
       </div>
     </div>
   </div>
+
+  <!-- ═══ 탭: 기억 ═══ -->
+  <div id="tab-memory" class="tabview">
+    <div class="card">
+      <div class="section-title">📔 나의 기억</div>
+      <div class="row">
+        <input type="date" id="memDate" onchange="renderMemory()">
+        <button class="mini move" onclick="memToday()" style="flex:0 0 auto">오늘 📅</button>
+      </div>
+      <div class="row">
+        <input type="text" id="memSearch" placeholder="🔍 전체 기억에서 검색 (예: 달리기)" oninput="renderMemory()">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title" id="memListTitle">☀️ 오늘 한 일</div>
+      <div id="memoryList"><div class="empty">불러오는 중...</div></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">✍️ 오늘의 일기</div>
+      <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px" id="diaryDateLabel"></div>
+      <textarea id="diaryText" placeholder="오늘 하루는 어땠나요? 자유롭게 적어보세요 🌸"></textarea>
+      <div class="row"><button class="btn" onclick="saveDiary()">일기 저장 📖</button></div>
+    </div>
+  </div>
 </div>
 </div>
 
@@ -435,6 +462,7 @@ let memoCatFilter = '전체';
 let unsubTodos = null, unsubMemos = null, unsubEx = null, unsubRoutines = null, unsubRT = null;
 let routines = [], routineTodos = [];
 let chartMode = 'ex', rFreq = 'weekly', rtMonth = null;
+let memories = [], diaries = {}, unsubMemory = null, unsubDiary = null;
 
 /* ── 베트남 시간 도우미 ── */
 const VN = 'Asia/Ho_Chi_Minh';
@@ -467,6 +495,47 @@ const EX_EMOJI=[
   [/탁구/,'🏓'],[/줄넘기|점프/,'🤸'],[/헬스|웨이트|근력|덤벨|바벨|턱걸이|철봉|역기/,'🏋️'],
   [/복싱|권투|킥복/,'🥊'],[/플랭크|코어|복근|윗몸|레그레이즈|레그 레이즈|크런치/,'🔥'],[/악력/,'✊'],[/완력/,'💪'],[/계단/,'🪜'],[/춤|댄스/,'💃']
 ];
+function memToday(){document.getElementById('memDate').value=vnDate();document.getElementById('memSearch').value='';renderMemory();}
+function renderMemory(){
+  if(!document.getElementById('memoryList'))return;
+  const dateEl=document.getElementById('memDate');
+  if(dateEl && !dateEl.value)dateEl.value=vnDate();
+  const kw=(document.getElementById('memSearch').value||'').trim();
+  const sel=dateEl.value;
+  let arr=memories.slice();
+  const title=document.getElementById('memListTitle');
+  if(kw){
+    arr=arr.filter(m=>(m.text||'').includes(kw));
+    title.textContent='🔍 "'+kw+'" 검색 결과 ('+arr.length+'건)';
+  }else{
+    arr=arr.filter(m=>m.doneDate===sel);
+    title.textContent=(sel===vnDate()?'☀️ 오늘 한 일':'📅 '+sel+' 한 일');
+  }
+  arr.sort((a,b)=>a.doneAt<b.doneAt?1:-1); // 최근 완료 위
+  const el=document.getElementById('memoryList');
+  el.innerHTML=arr.length?arr.map(m=>{
+    const time=new Intl.DateTimeFormat('ko-KR',{timeZone:VN,hour:'2-digit',minute:'2-digit'}).format(new Date(m.doneAt));
+    const ico=m.isExercise?exEmoji(m.exName):(m.isRoutine?'🔁':'✅');
+    const exb=m.isExercise?` <span class="badge ex">${esc(m.exName||'')} ${m.exAmount}${esc(m.exUnit||'')}</span>`:'';
+    return `<div class="memo-item">
+      <div class="memo-head"><span class="memo-cat">${ico} ${time}</span>${kw?`<span>${esc(m.doneDate)}</span>`:''}</div>
+      <div class="memo-text">${esc(m.text)}${exb}</div>
+    </div>`;
+  }).join(''):`<div class="empty">${kw?'검색 결과가 없어요 🍃':'이 날은 완료한 일이 없어요 🌱'}</div>`;
+  // 일기 표시
+  const dd=document.getElementById('diaryDateLabel'), dt=document.getElementById('diaryText');
+  if(dd&&dt){
+    dd.textContent='📆 '+sel+' 의 일기';
+    if(document.activeElement!==dt)dt.value=diaries[sel]||'';
+  }
+}
+function saveDiary(){
+  const sel=document.getElementById('memDate').value||vnDate();
+  const text=document.getElementById('diaryText').value;
+  col('diaries').doc(sel).set({text,updatedAt:new Date().toISOString()})
+    .then(()=>toastMsg('일기 저장 완료 📖🌸'))
+    .catch(e=>alert('저장 실패: '+e.message));
+}
 function exEmoji(name){
   const n=(name||'').trim();
   for(const [re,emo] of EX_EMOJI){if(re.test(n))return emo;}
@@ -520,7 +589,7 @@ auth.onAuthStateChanged(u=>{
     UID=null;
     loginView.style.display='block';
     appView.style.display='none';
-    if(unsubTodos)unsubTodos(); if(unsubMemos)unsubMemos(); if(unsubEx)unsubEx(); if(unsubRoutines)unsubRoutines(); if(unsubRT)unsubRT();
+    if(unsubTodos)unsubTodos(); if(unsubMemos)unsubMemos(); if(unsubEx)unsubEx(); if(unsubRoutines)unsubRoutines(); if(unsubRT)unsubRT(); if(unsubMemory)unsubMemory(); if(unsubDiary)unsubDiary();
   }
 });
 
@@ -546,15 +615,19 @@ function listenData(){
     .onSnapshot(s=>{routines=s.docs.map(d=>({id:d.id,...d.data()}));renderRoutines();generateRoutineTodos();});
   unsubRT = col('todos').where('isRoutine','==',true)
     .onSnapshot(s=>{routineTodos=s.docs.map(d=>({id:d.id,...d.data()}));if(chartMode==='routine')renderRoutineChart();});
+  unsubMemory = col('memories').orderBy('doneAt','desc').limit(1000)
+    .onSnapshot(s=>{memories=s.docs.map(d=>({id:d.id,...d.data()}));renderMemory();});
+  unsubDiary = col('diaries').onSnapshot(s=>{diaries={};s.docs.forEach(d=>diaries[d.id]=d.data().text||'');renderMemory();});
 }
 
 /* ── 탭 ── */
 function showTab(t){
-  ['todo','routine','memo','chart'].forEach(x=>{
+  ['todo','routine','memo','chart','memory'].forEach(x=>{
     document.getElementById('tab-'+x).classList.toggle('on',x===t);
     document.getElementById('tabBtn-'+x).classList.toggle('on',x===t);
   });
   if(t==='chart'){if(chartMode==='routine')renderRoutineChart();else renderChart();}
+  if(t==='memory')renderMemory();
 }
 
 /* ═══ 할일 ═══ */
@@ -632,10 +705,22 @@ function renderTodos(){
   list.innerHTML=html;
 }
 function toggleTodo(id,checked){
+  const now=new Date().toISOString(), d=vnDate();
   const upd=checked
-    ?{done:true,doneAt:new Date().toISOString(),doneDate:vnDate()}
+    ?{done:true,doneAt:now,doneDate:d}
     :{done:false,doneAt:null,doneDate:null};
   col('todos').doc(id).update(upd);
+  // 📔 기억에 자동 저장 (완료시간 + 한 일). 문서ID=할일ID 로 중복 방지
+  if(checked){
+    const t=todos.find(x=>x.id===id)||{};
+    col('memories').doc(id).set({
+      text:t.text||'', isExercise:!!t.isExercise, exName:t.exName||null,
+      exAmount:(t.exAmount!=null?t.exAmount:null), exUnit:t.exUnit||null,
+      isRoutine:!!t.isRoutine, doneAt:now, doneDate:d
+    });
+  }else{
+    col('memories').doc(id).delete(); // 체크 해제하면 기억에서도 제거
+  }
 }
 function completeTodo(id){
   toggleTodo(id,true);
